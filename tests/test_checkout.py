@@ -79,7 +79,7 @@ def test_duplicate_sku_is_rejected() -> None:
 
 def test_unknown_promo_code_is_rejected() -> None:
     """Spec 3, rule 9: only codes from PROMO_CODES exist."""
-    ...
+    assert validate_order([line()], "NOT_A_PROMOCODE") == "no such promocode exists"
 
 
 def test_unsupported_city_is_rejected() -> None:
