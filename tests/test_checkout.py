@@ -167,4 +167,9 @@ def test_free_delivery_uses_discounted_subtotal() -> None:
 
 def test_vat_is_charged_on_the_discounted_sum() -> None:
     """Spec 4, steps 8-10: base = discounted subtotal + delivery."""
-    ...
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-67", qty="10", unit_price_kopecks="18800")], "VIP35", "spb"
+        )
+        == 216720
+    )
