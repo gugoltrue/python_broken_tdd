@@ -95,7 +95,10 @@ def test_valid_order_passes_validation() -> None:
 
 def test_no_discount_below_first_tier() -> None:
     """Spec 4, steps 1-2: 9 units are below every threshold."""
-    ...
+    assert (
+        calculate_order_total([line(sku="SKU-5", qty="1", unit_price_kopecks="10000")], "", "")
+        == 12000
+    )
 
 
 def test_tier_discount_at_first_threshold() -> None:
