@@ -129,7 +129,12 @@ def test_promo_code_beats_tier_discount() -> None:
 
 def test_discount_is_capped_at_thirty_percent() -> None:
     """Spec 4, step 5: VIP35 gives 35%, but the cap is 30%. Compare with example 4."""
-    ...
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-6", qty="100", unit_price_kopecks="10000")], "VIP35", "spb"
+        )
+        == 840000
+    )
 
 
 def test_delivery_is_charged_for_small_order() -> None:
