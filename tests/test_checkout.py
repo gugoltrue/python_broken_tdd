@@ -29,94 +29,147 @@ def test_smoke_single_line_without_delivery() -> None:
 
 def test_empty_order_is_rejected() -> None:
     """Spec 3, rule 1: an order without lines cannot be processed."""
-    ...
+    reason = validate_order(lines=[])
+    assert reason == "Lines cannot be empty"
 
 
 def test_empty_sku_is_rejected() -> None:
     """Spec 3, rule 2: a blank article code is not allowed."""
-    ...
+    reason = validate_order(lines=[line(sku="")])
+    assert reason == "SKU cannot be empty"
 
 
 def test_missing_line_key_is_rejected() -> None:
     """Spec 3, rule 3: every required key must be present."""
-    ...
+    assert validate_order([{"qty": "1", "unit_price_kopecks": "10000"}]) == "Missing key: sku"
+    assert validate_order([{"sku": "SKU-1", "unit_price_kopecks": "10000"}]) == "Missing key: qty"
+    assert validate_order([{"sku": "SKU-1", "qty": "1"}]) == "Missing key: unit_price_kopecks"
 
 
 def test_non_numeric_quantity_is_rejected() -> None:
     """Spec 3, rule 4: `qty` must be a whole number."""
-    ...
+    assert validate_order(lines=[line(qty="five")]) == "qty must be a whole number"
 
 
 def test_zero_quantity_is_rejected() -> None:
     """Spec 3, rule 5: `qty` must be greater than zero."""
-    ...
+    assert validate_order(lines=[line(qty="0")]) == "qty must be greater than zero"
+    assert validate_order(lines=[line(qty="-32")]) == "qty must be greater than zero"
 
 
 def test_non_numeric_price_is_rejected() -> None:
     """Spec 3, rule 6: `unit_price_kopecks` must be a whole number."""
-    ...
+    assert (
+        validate_order(lines=[line(unit_price_kopecks="thousand")])
+        == "price must be a whole number"
+    )
 
 
 def test_negative_price_is_rejected() -> None:
     """Spec 3, rule 7: a price may not be negative."""
-    ...
+    assert validate_order(lines=[line(unit_price_kopecks="-1000")]) == "price must not be negative"
 
 
 def test_duplicate_sku_is_rejected() -> None:
     """Spec 3, rule 8: the same article may appear only once."""
-    ...
+    assert (
+        validate_order(lines=[line(sku="SKU-3"), line(sku="SKU-3")])
+        == "the same article may appear only once"
+    )
 
 
 def test_unknown_promo_code_is_rejected() -> None:
     """Spec 3, rule 9: only codes from PROMO_CODES exist."""
-    ...
+    assert validate_order([line()], "NOT_A_PROMOCODE") == "no such promocode exists"
 
 
 def test_unsupported_city_is_rejected() -> None:
     """Spec 3, rule 10: only cities from SUPPORTED_CITIES are served."""
-    ...
+    assert validate_order([line()], "", "New York") == "the city isn't supported"
 
 
 def test_valid_order_passes_validation() -> None:
     """Spec 3: a good order gets None back instead of a reason."""
-    ...
+    assert validate_order([line()], "WELCOME10", "spb") is None
 
 
 def test_no_discount_below_first_tier() -> None:
     """Spec 4, steps 1-2: 9 units are below every threshold."""
-    ...
+    assert (
+        calculate_order_total([line(sku="SKU-5", qty="1", unit_price_kopecks="10000")], "", "")
+        == 12000
+    )
 
 
 def test_tier_discount_at_first_threshold() -> None:
     """Spec 4, steps 2-5: 10 units give 5%. Compare with example 2."""
-    ...
+    assert (
+        calculate_order_total([line(sku="SKU-2", qty="10", unit_price_kopecks="1990")], "", "")
+        == 22686
+    )
 
 
 def test_tier_discount_at_highest_threshold() -> None:
     """Spec 4, steps 2-5: 50 units give 15%, not 5% + 10%."""
-    ...
+    assert (
+        calculate_order_total([line(sku="SKU-31", qty="50", unit_price_kopecks="1000")], "", "")
+        == 51000
+    )
 
 
 def test_promo_code_beats_tier_discount() -> None:
     """Spec 4, steps 3-4: the bigger percentage wins, the two do not add up."""
-    ...
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-15", qty="50", unit_price_kopecks="1990")], "WELCOME10", "msk"
+        )
+        == 160290
+    )
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-13", qty="25", unit_price_kopecks="1000")], "SUMMER15", ""
+        )
+        == 25500
+    )
 
 
 def test_discount_is_capped_at_thirty_percent() -> None:
     """Spec 4, step 5: VIP35 gives 35%, but the cap is 30%. Compare with example 4."""
-    ...
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-6", qty="100", unit_price_kopecks="10000")], "VIP35", "spb"
+        )
+        == 840000
+    )
 
 
 def test_delivery_is_charged_for_small_order() -> None:
     """Spec 4, steps 7-10: a city adds SHIPPING_KOPEKS and VAT is charged on it."""
-    ...
+    assert (
+        calculate_order_total([line(sku="SKU-7", qty="3", unit_price_kopecks="1000")], "", "spb")
+        == 62400
+    )
 
 
 def test_free_delivery_uses_discounted_subtotal() -> None:
     """Spec 4, step 7: the threshold is checked against the sum after the discount."""
-    ...
+    assert (
+        calculate_order_total([line(sku="SKU-10", qty="28", unit_price_kopecks="20000")], "", "spb")
+        == 604800
+    )
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-10", qty="28", unit_price_kopecks="20000")], "SUMMER15", "spb"
+        )
+        == 630000
+    )
 
 
 def test_vat_is_charged_on_the_discounted_sum() -> None:
     """Spec 4, steps 8-10: base = discounted subtotal + delivery."""
-    ...
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-67", qty="10", unit_price_kopecks="18800")], "VIP35", "spb"
+        )
+        == 216720
+    )
