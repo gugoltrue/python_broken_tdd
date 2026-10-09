@@ -125,6 +125,12 @@ def test_promo_code_beats_tier_discount() -> None:
         )
         == 160290
     )
+    assert (
+        calculate_order_total(
+            [line(sku="SKU-13", qty="25", unit_price_kopecks="1000")], "SUMMER15", ""
+        )
+        == 25500
+    )
 
 
 def test_discount_is_capped_at_thirty_percent() -> None:
