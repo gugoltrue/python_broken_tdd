@@ -111,7 +111,10 @@ def test_tier_discount_at_first_threshold() -> None:
 
 def test_tier_discount_at_highest_threshold() -> None:
     """Spec 4, steps 2-5: 50 units give 15%, not 5% + 10%."""
-    ...
+    assert (
+        calculate_order_total([line(sku="SKU-31", qty="50", unit_price_kopecks="1000")], "", "")
+        == 51000
+    )
 
 
 def test_promo_code_beats_tier_discount() -> None:
